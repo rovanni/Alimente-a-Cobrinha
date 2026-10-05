@@ -86,16 +86,17 @@ class MusicManager {
         this.audio = null;
         this.enabled = true;
         this.tracks = [
-            'tetris/assets/music/gregorquendel-tetris-theme-korobeiniki-arranged-for-piano-186249.ogg',
-            'tetris/assets/music/gregorquendel-tetris-theme-korobeiniki-rearranged-arr-for-music-box-184978.ogg',
-            'tetris/assets/music/gregorquendel-tetris-theme-korobeiniki-rearranged-arr-for-strings-185592.ogg'
+            'music/leberch-playful-441727.mp3',
+            'music/maksymmalko-playful-playful-music-604986.mp3'
         ];
         this.currentTrack = 0;
     }
 
     init() {
         this.audio = new Audio();
-        this.audio.loop = true;
+        // Sem loop: ao terminar uma faixa, toca a próxima da lista
+        this.audio.loop = this.tracks.length < 2;
+        this.audio.addEventListener('ended', () => this.nextTrack());
         this.audio.volume = 0.3;
         this.loadTrack();
     }
@@ -117,6 +118,7 @@ class MusicManager {
     }
 
     nextTrack() {
+        if (this.tracks.length < 2) return;
         this.currentTrack = (this.currentTrack + 1) % this.tracks.length;
         this.loadTrack();
         if (this.enabled) this.play();
@@ -142,6 +144,9 @@ const MEDAL_TIERS = [
 ];
 
 // ==================== CONFIGURAÇÕES DE DIFICULDADE ====================
+// Quantas comidas são necessárias para subir de nível
+const FOODS_PER_LEVEL = 5;
+
 const DIFFICULTY = {
     easy: {
         name: 'Fácil',
@@ -181,11 +186,13 @@ const musicManager = new MusicManager();
 let difficulty = 'normal';
 let gridSize = 20;
 let snake = [];
+const FOODS = ['🍎','🍌','🍇','🍓','🍉','🍊','🍒','🍍','🥕','🌽','🍕','🍔','🍩','🧀'];
 let food = {};
 let direction = { x: 1, y: 0 };
 let nextDirection = { x: 1, y: 0 };
 let score = 0;
 let level = 1;
+let foodsEaten = 0;
 let highScore = localStorage.getItem('snakeHighScore') || 0;
 let gameRunning = false;
 let paused = false;
@@ -253,14 +260,9 @@ function renderRecords(diff) {
 loadRecords();
 
 // ==================== RESPONSIVIDADE ====================
-function resizeCanvas() {
-    const maxSize = Math.min(window.innerWidth - 40, window.innerHeight - 350, 500);
-    const size = Math.floor(maxSize / 20) * 20;
-    canvas.width = size;
-    canvas.height = size;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+// O tabuleiro tem sempre 25x25 casas; o CSS escala o canvas para caber na área de jogo.
+canvas.width = 500;
+canvas.height = 500;
 
 // ==================== TOAST ====================
 let toastTimeout = null;
@@ -325,34 +327,25 @@ function updateTimer() {
 }
 
 function updateLevelProgress() {
-    const diff = DIFFICULTY[difficulty];
-    const timeForCurrentLevel = level * diff.levelTime;
-    const progress = Math.min((gameTime % timeForCurrentLevel) / timeForCurrentLevel * 100, 100);
-    document.getElementById('levelProgressBar').style.width = progress + '%';
+    const inLevel = foodsEaten % FOODS_PER_LEVEL;
+    document.getElementById('levelProgressBar').style.width = (inLevel / FOODS_PER_LEVEL * 100) + '%';
 }
 
 function checkLevelUp() {
-    const diff = DIFFICULTY[difficulty];
-    const timeForCurrentLevel = level * diff.levelTime;
+    if (foodsEaten < level * FOODS_PER_LEVEL) return;
 
-    if (gameTime >= timeForCurrentLevel) {
-        level++;
-        document.getElementById('level').textContent = level;
+    level++;
+    document.getElementById('level').textContent = level;
 
-        // Aumentar velocidade no normal/difícil ao subir de nível
-        if (difficulty !== 'easy' && speed > 60) {
-            speed -= 10;
-            restartGameLoop();
-        }
-
-        soundManager.playLevelUp();
-        showToast('⬆️', `Nível ${level}!`, 'level-up');
-
-        // Trocar música
-        musicManager.nextTrack();
-
-        updateLevelProgress();
+    // Aumentar velocidade no normal/difícil ao subir de nível
+    if (difficulty !== 'easy' && speed > 60) {
+        speed -= 10;
+        restartGameLoop();
     }
+
+    soundManager.playLevelUp();
+    showToast('⬆️', `Nível ${level}!`, 'level-up');
+
 }
 
 function restartGameLoop() {
@@ -373,6 +366,7 @@ function initGame() {
     nextDirection = { x: 1, y: 0 };
     score = 0;
     level = 1;
+    foodsEaten = 0;
     speed = diff.speed;
     gameTime = 0;
     currentMedal = null;
@@ -396,6 +390,7 @@ function spawnFood() {
             y: Math.floor(Math.random() * gridCount)
         };
     } while (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
+    newFood.icon = FOODS[Math.floor(Math.random() * FOODS.length)];
     food = newFood;
 }
 
@@ -427,15 +422,16 @@ function draw() {
         foodX + gridSize / 2, foodY + gridSize / 2, 0,
         foodX + gridSize / 2, foodY + gridSize / 2, gridSize
     );
-    gradient.addColorStop(0, 'rgba(255, 68, 68, 0.8)');
-    gradient.addColorStop(1, 'rgba(255, 68, 68, 0)');
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = gradient;
     ctx.fillRect(foodX - gridSize / 2, foodY - gridSize / 2, gridSize * 2, gridSize * 2);
 
-    ctx.fillStyle = '#ff4444';
-    ctx.beginPath();
-    ctx.arc(foodX + gridSize / 2, foodY + gridSize / 2, gridSize / 2 - 2, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.font = (gridSize - 2) + 'px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(food.icon, foodX + gridSize / 2, foodY + gridSize / 2 + 1);
 
     // Cobra
     snake.forEach((segment, index) => {
@@ -449,26 +445,103 @@ function draw() {
         ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 
         if (index === 0) {
-            ctx.fillStyle = '#00ff88';
+            ctx.save();
+            ctx.translate(x + gridSize / 2, y + gridSize / 2);
+            ctx.rotate(Math.atan2(direction.y, direction.x)); // frente da cobra = eixo +x
+
+            // Língua bifurcada
+            ctx.strokeStyle = '#ff3b5c';
+            ctx.lineWidth = 1.6;
+            ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.roundRect(x + 1, y + 1, gridSize - 2, gridSize - 2, 6);
+            ctx.moveTo(9, 0); ctx.lineTo(14, 0);
+            ctx.moveTo(14, 0); ctx.lineTo(17, -2.5);
+            ctx.moveTo(14, 0); ctx.lineTo(17, 2.5);
+            ctx.stroke();
+
+            // Cabeça com degradê
+            const g = ctx.createRadialGradient(-2, -3, 1, 0, 0, 12);
+            g.addColorStop(0, '#7dffc0');
+            g.addColorStop(1, '#00d46e');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.roundRect(-gridSize / 2 + 0.5, -gridSize / 2 + 0.5, gridSize - 1, gridSize - 1, 8);
             ctx.fill();
 
-            ctx.fillStyle = '#fff';
-            if (direction.x !== 0) {
+            // Narinas
+            ctx.fillStyle = '#0a6b3d';
+            ctx.beginPath();
+            ctx.arc(7.5, -2, 0.9, 0, Math.PI * 2);
+            ctx.arc(7.5, 2, 0.9, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Olhos grandes com pupila e brilho
+            for (const ey of [-5, 5]) {
+                ctx.fillStyle = '#fff';
                 ctx.beginPath();
-                ctx.arc(x + (direction.x > 0 ? 12 : 6), y + 6, 3, 0, Math.PI * 2);
-                ctx.arc(x + (direction.x > 0 ? 12 : 6), y + 14, 3, 0, Math.PI * 2);
+                ctx.arc(2.5, ey, 3.8, 0, Math.PI * 2);
                 ctx.fill();
-            } else {
+                ctx.fillStyle = '#12202b';
                 ctx.beginPath();
-                ctx.arc(x + 6, y + (direction.y > 0 ? 12 : 6), 3, 0, Math.PI * 2);
-                ctx.arc(x + 14, y + (direction.y > 0 ? 12 : 6), 3, 0, Math.PI * 2);
+                ctx.arc(3.6, ey, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(4.2, ey - 0.8, 0.7, 0, Math.PI * 2);
                 ctx.fill();
             }
-        } else {
+
+            // Bochechas rosadas
+            ctx.fillStyle = 'rgba(255, 105, 150, 0.45)';
             ctx.beginPath();
-            ctx.roundRect(x + 2, y + 2, gridSize - 4, gridSize - 4, 4);
+            ctx.arc(-4, -7, 1.8, 0, Math.PI * 2);
+            ctx.arc(-4, 7, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        } else {
+            const isTail = index === snake.length - 1;
+            const t = index / Math.max(snake.length - 1, 1);   // 0 = perto da cabeça, 1 = ponta da cauda
+            const h = 150 - t * 25;                            // verde -> verde-azulado
+            const light = 46 - t * 12;
+            const inset = isTail ? 4 : 1.5;                    // cauda mais fina
+            const cx = x + gridSize / 2, cy = y + gridSize / 2;
+            const size = gridSize - inset * 2;
+
+            // Liga este segmento ao anterior para o corpo ficar contínuo
+            const prev = snake[index - 1];
+            if (Math.abs(prev.x - segment.x) + Math.abs(prev.y - segment.y) === 1) {
+                const mx = (prev.x - segment.x) * gridSize / 2;
+                const my = (prev.y - segment.y) * gridSize / 2;
+                ctx.fillStyle = `hsl(${h}, 75%, ${light - 6}%)`;
+                ctx.fillRect(cx + mx - size / 2, cy + my - size / 2, size, size);
+            }
+
+            // Corpo com degradê (mais claro em cima, escuro embaixo)
+            const grad = ctx.createLinearGradient(x, y, x + gridSize, y + gridSize);
+            grad.addColorStop(0, `hsl(${h}, 85%, ${light + 12}%)`);
+            grad.addColorStop(1, `hsl(${h}, 75%, ${light - 8}%)`);
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(x + inset, y + inset, size, size, isTail ? 8 : 6);
+            ctx.fill();
+
+            // Escamas: losango alternado em cada segmento
+            if (!isTail) {
+                ctx.fillStyle = index % 2 === 0 ? 'rgba(0, 60, 40, 0.35)' : 'rgba(255, 235, 120, 0.45)';
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 4.5);
+                ctx.lineTo(cx + 4.5, cy);
+                ctx.lineTo(cx, cy + 4.5);
+                ctx.lineTo(cx - 4.5, cy);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Brilho
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+            ctx.beginPath();
+            ctx.ellipse(cx - 2.5, cy - 3.5, 3.5, 1.6, -0.6, 0, Math.PI * 2);
             ctx.fill();
         }
     });
@@ -508,10 +581,13 @@ function update() {
     // Comer comida
     if (head.x === food.x && head.y === food.y) {
         score += 10 * level; // Multiplicador por nível
+        foodsEaten++;
         document.getElementById('score').textContent = score;
         soundManager.playEat();
         spawnFood();
         checkMedals();
+        checkLevelUp();
+        updateLevelProgress();
     } else {
         snake.pop();
     }
@@ -520,15 +596,16 @@ function update() {
 }
 
 // ==================== GAME OVER ====================
-function gameOver() {
+function gameOver(manual = false) {
     gameRunning = false;
+    setGameButtons(false);
     paused = true;
     clearInterval(gameLoop);
     clearInterval(gameTimer);
     clearInterval(speedTimer);
     musicManager.pause();
 
-    soundManager.playGameOver();
+    if (!manual) soundManager.playGameOver();
 
     if (score > highScore) {
         highScore = score;
@@ -543,7 +620,7 @@ function gameOver() {
     const diff = DIFFICULTY[difficulty];
     document.getElementById('statsSummary').innerHTML = `
         <p>Dificuldade: ${diff.label} ${diff.name}</p>
-        <p>Comidas coletadas: ${Math.floor(score / (10 * level))}</p>
+        <p>Comidas coletadas: ${foodsEaten}</p>
         ${currentMedal ? `<p>Medalha: ${currentMedal.icon} ${currentMedal.name}</p>` : ''}
     `;
 
@@ -579,6 +656,7 @@ function startGame() {
     paused = false;
     document.getElementById('gameOver').style.display = 'none';
     document.getElementById('difficultySelector').style.display = 'none';
+    setGameButtons(true);
 
     draw();
 
@@ -591,8 +669,6 @@ function startGame() {
     gameTimer = setInterval(() => {
         if (gameRunning && !paused) {
             updateTimer();
-            updateLevelProgress();
-            checkLevelUp();
         }
     }, 1000);
 
@@ -611,6 +687,20 @@ function startGame() {
     musicManager.play();
 }
 
+// ==================== BOTÕES PAUSAR / PARAR ====================
+function setGameButtons(playing) {
+    document.getElementById('pauseBtn').disabled = !playing;
+    document.getElementById('stopBtn').disabled = !playing;
+    document.getElementById('startBtn').style.display = playing ? 'none' : 'block';
+    document.getElementById('gameButtons').style.display = 'flex';
+    document.getElementById('pauseBtn').textContent = '⏸️ Pausar';
+}
+
+function stopGame() {
+    if (!gameRunning) return;
+    gameOver(true);
+}
+
 // ==================== PAUSA ====================
 function togglePause() {
     if (!gameRunning) return;
@@ -622,6 +712,7 @@ function togglePause() {
         clearInterval(gameTimer);
         clearInterval(speedTimer);
         musicManager.pause();
+        document.getElementById('pauseBtn').textContent = '▶️ Continuar';
         showToast('⏸️', 'Jogo Pausado');
     } else {
         gameLoop = setInterval(() => {
@@ -631,8 +722,6 @@ function togglePause() {
         gameTimer = setInterval(() => {
             if (gameRunning && !paused) {
                 updateTimer();
-                updateLevelProgress();
-                checkLevelUp();
             }
         }, 1000);
 
@@ -648,6 +737,7 @@ function togglePause() {
         }
 
         musicManager.play();
+        document.getElementById('pauseBtn').textContent = '⏸️ Pausar';
         showToast('▶️', 'Jogo Retomado');
     }
 }
@@ -755,6 +845,8 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
 // Botões
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('pauseBtn').addEventListener('click', e => { e.currentTarget.blur(); togglePause(); });
+document.getElementById('stopBtn').addEventListener('click', e => { e.currentTarget.blur(); stopGame(); });
 
 // ===== MODAIS =====
 // Ajuda
@@ -807,5 +899,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Desenhar estado inicial
+setGameButtons(false);
 initGame();
 draw();

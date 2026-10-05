@@ -9,57 +9,67 @@
 </head>
 
 <body>
-    <button class="sound-toggle" id="soundToggle" title="Ativar/Desativar Som">🔊</button>
-    <button class="music-toggle" id="musicToggle" title="Ativar/Desativar Música">🎵</button>
-    <button class="help-btn" id="helpBtn" title="Ajuda">❓</button>
-    <button class="records-btn" id="recordsBtn" title="Records">🏆</button>
+    <div class="app">
+        <aside class="sidebar" aria-label="Opções e Placar">
+            <div class="sidebar__header">
+                <span class="sidebar__title">🐍 Cobrinha</span>
+                <div class="header-actions">
+                    <button class="icon-btn" id="helpBtn" title="Ajuda">❓</button>
+                    <button class="icon-btn" id="recordsBtn" title="Records">🏆</button>
+                    <button class="icon-btn" id="musicToggle" title="Ativar/Desativar Música">🎵</button>
+                    <button class="icon-btn" id="soundToggle" title="Ativar/Desativar Som">🔊</button>
+                </div>
+            </div>
 
-    <div class="game-container">
-        <h1>🐍 Alimente a Cobrinha</h1>
+            <div class="control-section">
+                <span class="control-label">Dificuldade</span>
+                <div class="difficulty-selector" id="difficultySelector">
+                    <button class="diff-btn" data-diff="easy">🟢 Fácil</button>
+                    <button class="diff-btn active" data-diff="normal">🟡 Normal</button>
+                    <button class="diff-btn" data-diff="hard">🔴 Difícil</button>
+                </div>
+            </div>
 
-        <!-- Seletor de Dificuldade -->
-        <div class="difficulty-selector" id="difficultySelector">
-            <button class="diff-btn" data-diff="easy">🟢 Fácil</button>
-            <button class="diff-btn active" data-diff="normal">🟡 Normal</button>
-            <button class="diff-btn" data-diff="hard">🔴 Difícil</button>
-        </div>
+            <div class="control-section">
+                <span class="control-label">Placar</span>
+                <div class="info-panel">
+                    <div class="score-item">Pontos <span id="score">0</span></div>
+                    <div class="score-item">Recorde <span id="highScore">0</span></div>
+                    <div class="score-item">Nível <span id="level">1</span></div>
+                </div>
+                <div class="level-progress">
+                    <div class="level-progress-bar" id="levelProgressBar"></div>
+                </div>
+                <div class="timer-display" id="timerDisplay">⏱️ 00:00</div>
+                <div class="medal-display" id="medalDisplay">
+                    <span class="medal-icon" id="medalIcon">🏅</span>
+                    <span class="medal-name" id="medalName">Iniciante</span>
+                </div>
+            </div>
 
-        <!-- Painel de Informações -->
-        <div class="info-panel">
-            <div class="score-item">Pontuação: <span id="score">0</span></div>
-            <div class="score-item">Recorde: <span id="highScore">0</span></div>
-            <div class="score-item">Nível: <span id="level">1</span></div>
-        </div>
+            <div class="sidebar__hint">
+                <p class="instructions">⌨️ <strong>Setas / WASD</strong> para mover · <strong>Espaço</strong> para pausar</p>
+            </div>
 
-        <!-- Barra de Progresso do Nível -->
-        <div class="level-progress">
-            <div class="level-progress-bar" id="levelProgressBar"></div>
-        </div>
+            <button id="startBtn">▶️ Iniciar Jogo</button>
+            <div class="game-buttons" id="gameButtons">
+                <button id="pauseBtn" disabled>⏸️ Pausar</button>
+                <button id="stopBtn" disabled>⏹️ Parar</button>
+            </div>
+        </aside>
 
-        <!-- Timer -->
-        <div class="timer-display" id="timerDisplay">⏱️ 00:00</div>
+        <main class="game-area" id="gameArea">
+            <canvas id="gameCanvas"></canvas>
 
-        <!-- Medalha -->
-        <div class="medal-display" id="medalDisplay">
-            <span class="medal-icon" id="medalIcon">🏅</span>
-            <span class="medal-name" id="medalName">Iniciante</span>
-        </div>
-
-        <canvas id="gameCanvas"></canvas>
-
-        <div class="controls">
-            <div class="control-btn empty"></div>
-            <button class="control-btn" id="upBtn">⬆️</button>
-            <div class="control-btn empty"></div>
-            <button class="control-btn" id="leftBtn">⬅️</button>
-            <button class="control-btn" id="downBtn">⬇️</button>
-            <button class="control-btn" id="rightBtn">➡️</button>
-            <div class="control-btn empty"></div>
-        </div>
-
-        <button id="startBtn">▶️ Iniciar Jogo</button>
-
-        <p class="instructions">Use as setas do teclado ou WASD para mover · Espaço para pausar</p>
+            <div class="controls">
+                <div class="control-btn empty"></div>
+                <button class="control-btn" id="upBtn">⬆️</button>
+                <div class="control-btn empty"></div>
+                <button class="control-btn" id="leftBtn">⬅️</button>
+                <button class="control-btn" id="downBtn">⬇️</button>
+                <button class="control-btn" id="rightBtn">➡️</button>
+            </div>
+        </main>
     </div>
 
     <!-- Toast de Notificação -->
@@ -107,7 +117,7 @@
                 <p><strong>🔴 Difícil:</strong> Morre nas paredes, velocidade aumenta por nível + a cada 30s</p>
 
                 <h3>📈 Níveis</h3>
-                <p>O nível sobe com o tempo de jogo. Cada maçã vale <strong>10 × nível</strong> pontos.</p>
+                <p>O nível sobe a cada 5 comidas coletadas. Cada comida vale <strong>10 × nível</strong> pontos.</p>
 
                 <h3>🏅 Medalhas</h3>
                 <p>🥉 Bronze: 1.000 &nbsp;|&nbsp; 🥈 Prata: 2.500 &nbsp;|&nbsp; 🥇 Ouro: 5.000 &nbsp;|&nbsp; 💎

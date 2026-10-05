@@ -46,15 +46,10 @@ Antes de iniciar, escolha uma das 3 dificuldades:
 
 ## 📈 Níveis e Progressão
 
-- O **nível** sobe automaticamente com o tempo de jogo
-- Cada dificuldade tem um tempo diferente para subir de nível:
-  - **Fácil:** 30s × nível atual
-  - **Normal:** 25s × nível atual
-  - **Difícil:** 20s × nível atual
-- A **barra de progresso** mostra quanto falta para o próximo nível
+- O **nível** sobe a cada **5 comidas** coletadas
+- A **barra de progresso** mostra quantas comidas faltam para o próximo nível
 - Ao subir de nível:
   - A velocidade aumenta (exceto no Fácil)
-  - A música de fundo troca
   - Uma notificação aparece no topo
 
 ---
@@ -83,7 +78,7 @@ Medalhas são conquistadas pela **pontuação total**:
 ## 🔊 Áudio
 
 - **Efeitos sonoros:** comer, mover, game over, level up, medalha
-- **Música de fundo:** 3 faixas que alternam a cada nível
+- **Música de fundo:** as faixas tocam em sequência, trocando só quando uma termina
 - Botões no canto superior direito para ativar/desativar som e música separadamente
 
 ---
